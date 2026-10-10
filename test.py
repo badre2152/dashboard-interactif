@@ -1,3 +1,6 @@
+import os
+from sqlalchemy.engine import URL
+
 # %%
 import streamlit as st
 import pandas as pd
@@ -13,7 +16,18 @@ px.defaults.template = "plotly_white"
 # Initialize connection
 @st.cache_resource
 def init_connection():
-    conn_str = "postgresql+psycopg2://postgres:Badre2152%40@127.0.0.1:5432/new_test1"
+    keys = ("DB_USER", "DB_PASSWORD", "DB_HOST", "DB_PORT", "DB_NAME")
+    missing = [key for key in keys if not os.getenv(key)]
+    if missing:
+        raise ValueError("Missing database settings: " + ", ".join(missing))
+    conn_str = URL.create(
+        "postgresql+psycopg2",
+        username=os.environ["DB_USER"],
+        password=os.environ["DB_PASSWORD"],
+        host=os.environ["DB_HOST"],
+        port=int(os.environ["DB_PORT"]),
+        database=os.environ["DB_NAME"],
+    )
     return create_engine(conn_str)
 
 engine = init_connection()
@@ -65,10 +79,10 @@ df_filtered = df[
 ]
 
 # %%
-st.title("📊 Superstore Analytics Dashboard")
+st.title(" Superstore Analytics Dashboard")
 st.markdown("Interactive analysis of sales, profit, and customer performance")
 
-with st.expander("📘 Dashboard Instructions"):
+with st.expander(" Dashboard Instructions"):
     st.markdown("""
 - Use sidebar filters to select **regions** and **categories**.
 - KPIs summarize overall **sales performance**.
@@ -78,28 +92,28 @@ with st.expander("📘 Dashboard Instructions"):
 - All visualizations update automatically when filters change.
 """)
 
-st.markdown("---")
+st.divider()
 
 # KPI Metrics
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("💰 Total Sales", f"${df_filtered['sales'].sum():,.0f}")
-col2.metric("📈 Total Profit", f"${df_filtered['profit'].sum():,.0f}")
+col1.metric(" Total Sales", f"${df_filtered['sales'].sum():,.0f}")
+col2.metric(" Total Profit", f"${df_filtered['profit'].sum():,.0f}")
 sales_sum = df_filtered['sales'].sum()
 weighted_profit_margin = (df_filtered['profit'].sum() / sales_sum * 100) if sales_sum else 0
-col3.metric("📊 Profit Margin", f"{weighted_profit_margin:.1f}%")
-col4.metric("🧾 Orders Count", len(df_filtered))
+col3.metric(" Profit Margin", f"{weighted_profit_margin:.1f}%")
+col4.metric(" Orders Count", len(df_filtered))
 
-st.markdown("---")
+st.divider()
 
 # Descriptive Statistics
-st.subheader("📈 Descriptive Statistics")
+st.subheader(" Descriptive Statistics")
 stats = df_filtered[['sales','profit','profit_margin']].describe()
 st.dataframe(stats)
 
-st.markdown("---")
+st.divider()
 
 # Sales Distribution Pie Chart (Click to filter)
-st.subheader("🥧 Sales Distribution by Category (Click to filter)")
+st.subheader(" Sales Distribution by Category (Click to filter)")
 category_sales = df_filtered.groupby('category')['sales'].sum().reset_index()
 fig_pie = px.pie(
     category_sales,
@@ -120,7 +134,7 @@ else:
     df_click_filtered = df_filtered
 
 st.plotly_chart(fig_pie, use_container_width=True)
-st.markdown("---")
+st.divider()
 
 # Sales Trend + 3-Month Moving Average
 sales_trend = df_click_filtered.groupby('month_year')['sales'].sum().reset_index()
@@ -148,7 +162,7 @@ fig_line.add_trace(
     )
 )
 fig_line.update_layout(
-    title='📈 Sales Trend Over Time (with 3-Month Moving Average)',
+    title=' Sales Trend Over Time (with 3-Month Moving Average)',
     xaxis_title='Month',
     yaxis_title='Sales ($)',
     title_x=0.5
@@ -161,7 +175,7 @@ fig_bar = px.bar(
     y='sales',
     color='category',
     text_auto=True,
-    title="🛍 Sales by Category",
+    title=" Sales by Category",
     hover_data={'sales':':,.0f'}
 )
 fig_bar.update_layout(title_x=0.5)
@@ -173,11 +187,11 @@ with col1:
 with col2:
     st.plotly_chart(fig_bar, use_container_width=True)
 
-st.markdown("---")
+st.divider()
 
 # Sales vs Profit Chart
 if df_click_filtered.empty:
-    st.warning("⚠️ No data available for Sales vs Profit chart.")
+    st.warning(" No data available for Sales vs Profit chart.")
 else:
     sales_profit_melted = df_click_filtered.groupby('category')[['sales','profit']].sum().reset_index().melt(
         id_vars='category', value_vars=['sales','profit'], var_name='Metric', value_name='Amount'
@@ -194,7 +208,7 @@ else:
     )
     st.plotly_chart(fig_comb, use_container_width=True)
 
-st.markdown("---")
+st.divider()
 
 # Top 10 Products
 top_products = df_click_filtered.groupby('product_name')['sales'].sum().sort_values(ascending=False).head(10)
@@ -203,7 +217,7 @@ fig_top_products = px.bar(
     x='product_name',
     y='sales',
     text_auto=True,
-    title="🏆 Top 10 Products by Sales",
+    title=" Top 10 Products by Sales",
     hover_data={'sales':':,.0f'}
 )
 st.plotly_chart(fig_top_products, use_container_width=True)
@@ -215,15 +229,15 @@ fig_top_clients = px.bar(
     x='customer_name',
     y='sales',
     text_auto=True,
-    title="🏆 Top 10 Clients by Sales",
+    title=" Top 10 Clients by Sales",
     hover_data={'sales':':,.0f'}
 )
 st.plotly_chart(fig_top_clients, use_container_width=True)
 
-st.markdown("---")
+st.divider()
 
 # Correlation Heatmap
-st.subheader("🔍 Correlation Heatmap")
+st.subheader(" Correlation Heatmap")
 numeric_cols = df_click_filtered.select_dtypes(include='number').columns.tolist()
 corr = df_click_filtered[numeric_cols].corr()
 plt.figure(figsize=(7,5))
